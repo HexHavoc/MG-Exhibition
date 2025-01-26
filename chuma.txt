@@ -1,0 +1,11 @@
+function $showResults(appState){
+    let endMsg = `You got ${appState.pointCorrect} points`;
+    let timeLeft = appState.remainingTime;
+    let minutes = Math.floor(timeLeft / 60);
+    let seconds = timeLeft % 60;
+    
+    endMsg += ` and had ${minutes} minutes ${seconds} seconds remaining`;
+
+    $('.quiz-end-score').html(endMsg);
+    // Rest of existing $showResults logic...
+}
