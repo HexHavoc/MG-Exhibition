@@ -145,17 +145,16 @@ button {
 	background: rgb(210, 151, 74);
 }
 
-/******* FOOTER *******/
-
-.progress-bar {
-	background: rgba(0,0,0,0.75);
-	margin-bottom: 3rem;
+.progress{
+	position: absolute;
+	bottom: 2rem;
 }
 
 .progress-count,.progress-perc,.progress-word{
 	font-size: 2.5rem;
 	color: white;
 	font-weight: bold;
+	margin-bottom: 5rem;
 }
 
 .progress-perc{

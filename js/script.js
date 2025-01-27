@@ -278,15 +278,38 @@ const STORE = {
     // Get all questions from STORE
     const allQuestions = STORE.questions;
     
-    // Create a shuffled copy of the questions array
-    const shuffledQuestions = [...allQuestions]
-      .map(value => ({ value, sort: Math.random() }))
-      .sort((a, b) => a.sort - b.sort)
-      .map(({ value }) => value);
+    // Fisher-Yates shuffle algorithm for better randomization
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+
+    const getRandomInteger = (min, max) => {
+      min = Math.ceil(min)
+      max = Math.floor(max)
     
-    // Take the first 10 questions
-    const selectedQuestions = shuffledQuestions.slice(0, 10);
+      return Math.floor(Math.random() * (max - min)) + min
+    }
+    
+    // Random integer between 5 and 9
+    const randomInteger = getRandomInteger(0, 20)
   
+    
+    // Create a deep copy of questions to avoid modifying original array
+    const questionsCopy = JSON.parse(JSON.stringify(allQuestions));
+    
+    // Shuffle the questions array
+    const shuffledQuestions = shuffleArray(questionsCopy);
+    
+    // Take only the first 10 questions
+    const selectedQuestions = shuffledQuestions.slice(randomInteger, randomInteger + 10);
+    
+    console.log(selectedQuestions)
+    // Initialize quiz state
     return {
       questions: selectedQuestions,
       midQuiz: false,
@@ -295,26 +318,25 @@ const STORE = {
         incorrectCategories: [],
       },
       completed: false,
-      currentQuestion: 0,
+      currentQuestion: 1,  // Changed to 0 to match array indexing
       correctAnswers: 0,
       currentAnswer: "",
       pointCorrect: 0,
       timer: null,
-      totalTime: 150,
-      remainingTime: 150,
+      totalTime: 120,
+      remainingTime: 120,
     };
   }
   
-  // Update helpers object
+  // Also update the helpers object to include better answer randomization
   const helpers = {
-    // Remove the old question selection methods since we're not using them anymore
     shuffleAnswers: (arr) => {
-      for (var i = arr.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var temp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = temp;
+      // Fisher-Yates shuffle for answers
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
       }
+      return arr; // Return the shuffled array for chaining if needed
     },
     updateProgressBar: (appState) => {
       $(".progress-bar").empty();
@@ -354,7 +376,7 @@ const STORE = {
     }
   
     // Start quiz with timer
-    $(".start-quiz, .retry-btn").on("click", initializeNewQuiz);
+    $(".start-quiz").on("click", initializeNewQuiz);
   
     // Stop timer if quiz is quit
     $(".quit-quiz").on("click", () => {
@@ -366,11 +388,21 @@ const STORE = {
   });
   
   // Modify $showResults to show remaining time
-  function $showResults(appState) {
+  function $showResults(appState) {    
     const endMsg = `You got ${appState.pointCorrect} points`
-    const timeLeft = appState.remainingTime
-  
-    $(".quiz-end-score").html(endMsg)
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    (async () => {
+      $(".quiz-end-score").css("font-size", "10rem");
+      $(".quiz-end-score").html(endMsg);
+      await sleep(5000);
+      window.location.href = "index.html";
+    })();
+    
+
   
     // Ensure progress bar and timer remain hidden
     $(".progress, .progress-bar, .timer").hide()
@@ -479,51 +511,61 @@ const STORE = {
   // Answer is selected and submitted
   // Push a feedback state
   function submitAnswer(appState) {
-    let correct
+    let correct;
+
+    console.log(appState.questions.length)
   
     $(".answer-btn").each(function () {
       if ($(this).html() === appState.questions[appState.currentQuestion].correctAnswer) {
-        $(this).addClass("pass")
+        $(this).addClass("pass");
   
         // If answer is correct and selected
         if ($(this).hasClass("selected")) {
-          correct = "pass"
-          appState.pointCorrect += 10 // Ensure point increment
-          appState.correctAnswers++
+          correct = "pass";
+          appState.pointCorrect += 10;
+          appState.correctAnswers++;
         }
       } else if ($(this).hasClass("selected")) {
-        $(this).addClass("fail dim-answer")
-        correct = "fail"
-        appState.progress.incorrectCategories.push(appState.questions[appState.currentQuestion].category)
+        $(this).addClass("fail dim-answer");
+        correct = "fail";
+        appState.progress.incorrectCategories.push(appState.questions[appState.currentQuestion].category);
       } else {
-        $(this).addClass("dim-answer")
+        $(this).addClass("dim-answer");
       }
-    })
+    });
   
-    // Rest of the function remains the same
-    appState.progress.progressBar.push(`<div class="progress-indicator ${correct}"></div>`)
+    // Add progress indicator
+    appState.progress.progressBar.push(`<div class="progress-indicator ${correct}"></div>`);
   
+    // Update progress count
     $(".progress-count").html(`
-          ${appState.currentQuestion + 1} / ${appState.questions.length}
-      `)
+      ${appState.currentQuestion + 1} / ${10}
+    `);
   
+    // Update points display
     $(".progress-perc").html(`
-           // ${appState.pointCorrect} points
-      `)
+      // ${appState.pointCorrect} points
+    `);
   
-    $(".submit-btn").val("Continue").removeClass("submit-btn").addClass("continue-btn")
+    // Change submit button to continue
+    $(".submit-btn").val("Continue").removeClass("submit-btn").addClass("continue-btn");
   
-    $(".answer-btn").prop("disabled", true)
+    // Disable answer buttons
+    $(".answer-btn").prop("disabled", true);
   
-    helpers.updateProgressBar(appState)
+    // Update progress bar before checking completion
+    helpers.updateProgressBar(appState);
   
-    appState.currentQuestion++
+    // Increment question counter
+    appState.currentQuestion++;
   
+    // Check if quiz is complete
     if (appState.currentQuestion === appState.questions.length) {
-      appState.completed = true
+      appState.completed = true;
+      // Ensure progress bar is fully visible for the last question
+      $(".progress, .progress-bar").show();
     }
   }
-  
   // Silly easter egg for saying you don't want to do the quiz
   function killQuiz() {
     $(".start-quiz, .quit-quiz").hide()
@@ -553,7 +595,7 @@ const STORE = {
     let quizData
   
     // Start quiz
-    $(".start-quiz, .retry-btn").on("click", () => {
+    $(".start-quiz").on("click", () => {
       quizData = makeQuiz()
       $(".timer").hide();
       $fade(quizData)
